@@ -21,10 +21,20 @@ public class RcsNotificationListener extends NotificationListenerService {
 
         Notification notification = sbn.getNotification();
         if (notification == null) return;
+
+        // Skip Google Messages' own status/plumbing notifications, not messages:
+        // "Messages is doing work in the background" (foreground service),
+        // the ongoing sync, and multi-message group summaries.
+        int flags = notification.flags;
+        if ((flags & Notification.FLAG_FOREGROUND_SERVICE) != 0) return;
+        if ((flags & Notification.FLAG_ONGOING_EVENT) != 0) return;
+        if ((flags & Notification.FLAG_GROUP_SUMMARY) != 0) return;
+
         Bundle extras = notification.extras;
         if (extras == null) return;
 
-        String sender = extras.getString(Notification.EXTRA_TITLE, "Unknown");
+        String sender = extras.getString(Notification.EXTRA_TITLE, "");
+        if (sender.isEmpty()) return;
 
         CharSequence bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT);
         CharSequence text = extras.getCharSequence(Notification.EXTRA_TEXT);

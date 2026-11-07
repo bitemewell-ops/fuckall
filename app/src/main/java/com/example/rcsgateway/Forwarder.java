@@ -30,10 +30,33 @@ public final class Forwarder {
     public static final String EXTRA_LOG_LINE = "log_line";
     private static final String FAILED_SPOOL = "failed_payloads.log";
 
+    // Cross-path de-dupe: a plain SMS is seen both by SmsReceiver and (because
+    // Google Messages also notifies) by RcsNotificationListener. Suppress a
+    // repeat of the same body within a short window so the gate gets it once.
+    private static final long DEDUP_MS = 20_000;
+    private static final java.util.HashMap<String, Long> RECENT = new java.util.HashMap<>();
+
     private Forwarder() {}
+
+    private static synchronized boolean isDuplicate(String message) {
+        long now = System.currentTimeMillis();
+        String key = message == null ? "" : message.trim();
+        java.util.Iterator<java.util.Map.Entry<String, Long>> it = RECENT.entrySet().iterator();
+        while (it.hasNext()) {
+            if (now - it.next().getValue() > DEDUP_MS) it.remove();
+        }
+        Long prev = RECENT.get(key);
+        if (prev != null && now - prev <= DEDUP_MS) return true;
+        RECENT.put(key, now);
+        return false;
+    }
 
     public static void send(final Context context, final String sender, final String message) {
         if (message == null || message.isEmpty()) return;
+        if (isDuplicate(message)) {
+            log(context.getApplicationContext(), "dup skipped [" + sender + "]");
+            return;
+        }
 
         SharedPreferences prefs =
                 context.getSharedPreferences("RcsGatewayPrefs", Context.MODE_PRIVATE);
