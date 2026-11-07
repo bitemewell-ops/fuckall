@@ -56,6 +56,8 @@ public class MainActivity extends AppCompatActivity {
         etPublicUrl.setText(prefs.getString("public_url", ""));
 
         requestSmsPermission();
+        requestNotificationsPermission();
+        GatewayService.start(this);
 
         btnGrant.setOnClickListener(v ->
                 startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)));
@@ -94,6 +96,15 @@ public class MainActivity extends AppCompatActivity {
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(
                     this, new String[]{Manifest.permission.RECEIVE_SMS}, 1);
+        }
+    }
+
+    private void requestNotificationsPermission() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                    this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, 2);
         }
     }
 
