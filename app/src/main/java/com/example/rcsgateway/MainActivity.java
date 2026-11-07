@@ -26,7 +26,7 @@ public class MainActivity extends AppCompatActivity {
 
     private TextView tvPermissionStatus, tvLogs;
     private ScrollView scrollLogs;
-    private EditText etLocalUrl, etPublicUrl;
+    private EditText etLocalUrl, etPublicUrl, etOutboxUrl;
     private SharedPreferences prefs;
 
     private final BroadcastReceiver logReceiver = new BroadcastReceiver() {
@@ -49,11 +49,13 @@ public class MainActivity extends AppCompatActivity {
         scrollLogs = findViewById(R.id.scroll_logs);
         etLocalUrl = findViewById(R.id.et_local_url);
         etPublicUrl = findViewById(R.id.et_public_url);
+        etOutboxUrl = findViewById(R.id.et_outbox_url);
         Button btnGrant = findViewById(R.id.btn_grant_permission);
         Button btnSave = findViewById(R.id.btn_save_config);
 
         etLocalUrl.setText(prefs.getString("local_url", ""));
         etPublicUrl.setText(prefs.getString("public_url", ""));
+        etOutboxUrl.setText(prefs.getString("outbox_url", ""));
 
         requestSmsPermission();
         requestNotificationsPermission();
@@ -66,6 +68,7 @@ public class MainActivity extends AppCompatActivity {
             prefs.edit()
                     .putString("local_url", etLocalUrl.getText().toString().trim())
                     .putString("public_url", etPublicUrl.getText().toString().trim())
+                    .putString("outbox_url", etOutboxUrl.getText().toString().trim())
                     .apply();
             Toast.makeText(this, "Config saved", Toast.LENGTH_SHORT).show();
             appendLog("Config saved.");
@@ -92,10 +95,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void requestSmsPermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS)
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(
-                    this, new String[]{Manifest.permission.RECEIVE_SMS}, 1);
+        boolean needRecv = ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS)
+                != PackageManager.PERMISSION_GRANTED;
+        boolean needSend = ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
+                != PackageManager.PERMISSION_GRANTED;
+        if (needRecv || needSend) {
+            ActivityCompat.requestPermissions(this, new String[]{
+                    Manifest.permission.RECEIVE_SMS,
+                    Manifest.permission.SEND_SMS}, 1);
         }
     }
 

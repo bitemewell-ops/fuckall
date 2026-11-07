@@ -24,6 +24,9 @@ public class GatewayService extends Service {
     private static final String CHANNEL_ID = "gateway";
     private static final int NOTIF_ID = 1;
 
+    private OutboxPoller poller;
+    private Thread pollThread;
+
     public static void start(Context ctx) {
         ContextCompat.startForegroundService(ctx, new Intent(ctx, GatewayService.class));
     }
@@ -31,7 +34,19 @@ public class GatewayService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         startForeground(NOTIF_ID, buildNotification());
+        if (poller == null) {
+            poller = new OutboxPoller(this);
+            pollThread = new Thread(poller, "outbox-poller");
+            pollThread.start();
+        }
         return START_STICKY;
+    }
+
+    @Override
+    public void onDestroy() {
+        if (poller != null) poller.stop();
+        if (pollThread != null) pollThread.interrupt();
+        super.onDestroy();
     }
 
     @Override
