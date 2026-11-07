@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.widget.Button;
@@ -15,7 +16,11 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
+import android.Manifest;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -27,7 +32,7 @@ public class MainActivity extends AppCompatActivity {
     private final BroadcastReceiver logReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            String line = intent.getStringExtra(RcsNotificationListener.EXTRA_LOG_LINE);
+            String line = intent.getStringExtra(Forwarder.EXTRA_LOG_LINE);
             if (line != null) appendLog(line);
         }
     };
@@ -50,6 +55,8 @@ public class MainActivity extends AppCompatActivity {
         etLocalUrl.setText(prefs.getString("local_url", ""));
         etPublicUrl.setText(prefs.getString("public_url", ""));
 
+        requestSmsPermission();
+
         btnGrant.setOnClickListener(v ->
                 startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)));
 
@@ -68,7 +75,7 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         checkPermission();
         LocalBroadcastManager.getInstance(this)
-                .registerReceiver(logReceiver, new IntentFilter(RcsNotificationListener.ACTION_LOG));
+                .registerReceiver(logReceiver, new IntentFilter(Forwarder.ACTION_LOG));
     }
 
     @Override
@@ -82,17 +89,30 @@ public class MainActivity extends AppCompatActivity {
         scrollLogs.post(() -> scrollLogs.fullScroll(ScrollView.FOCUS_DOWN));
     }
 
+    private void requestSmsPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                    this, new String[]{Manifest.permission.RECEIVE_SMS}, 1);
+        }
+    }
+
+    private boolean hasSmsPermission() {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS)
+                == PackageManager.PERMISSION_GRANTED;
+    }
+
     private void checkPermission() {
         ComponentName cn = new ComponentName(this, RcsNotificationListener.class);
         String flat = Settings.Secure.getString(getContentResolver(), "enabled_notification_listeners");
-        boolean enabled = flat != null && flat.contains(cn.flattenToString());
+        boolean rcsEnabled = flat != null && flat.contains(cn.flattenToString());
+        boolean smsGranted = hasSmsPermission();
 
-        if (enabled) {
-            tvPermissionStatus.setText("Permission: GRANTED");
-            tvPermissionStatus.setTextColor(0xFF008800);
-        } else {
-            tvPermissionStatus.setText("Permission: NOT GRANTED");
-            tvPermissionStatus.setTextColor(0xFFFF0000);
-        }
+        // SMS permission is what captures ALL plain texts (incl. OTP); the
+        // notification listener is only needed for RCS.
+        String line = "SMS: " + (smsGranted ? "ON" : "OFF")
+                + "   |   RCS access: " + (rcsEnabled ? "ON" : "OFF");
+        tvPermissionStatus.setText(line);
+        tvPermissionStatus.setTextColor(smsGranted ? 0xFF008800 : 0xFFFF0000);
     }
 }
