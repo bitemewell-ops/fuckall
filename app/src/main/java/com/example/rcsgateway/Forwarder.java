@@ -62,6 +62,7 @@ public final class Forwarder {
                 context.getSharedPreferences("RcsGatewayPrefs", Context.MODE_PRIVATE);
         final String localUrl = prefs.getString("local_url", "");
         final String publicUrl = prefs.getString("public_url", "");
+        final String token = prefs.getString("token", "");
         final Context app = context.getApplicationContext();
 
         new Thread(new Runnable() {
@@ -81,11 +82,11 @@ public final class Forwarder {
 
                 boolean success = false;
                 if (!localUrl.isEmpty()) {
-                    success = executePost(localUrl, jsonString, 3000);
+                    success = executePost(localUrl, jsonString, 3000, token);
                     log(app, (success ? "LOCAL ok   " : "LOCAL fail ") + preview(sender, message));
                 }
                 if (!success && !publicUrl.isEmpty()) {
-                    success = executePost(publicUrl, jsonString, 5000);
+                    success = executePost(publicUrl, jsonString, 5000, token);
                     log(app, (success ? "PUBLIC ok  " : "PUBLIC fail") + preview(sender, message));
                 }
                 if (!success) {
@@ -96,7 +97,7 @@ public final class Forwarder {
         }).start();
     }
 
-    private static boolean executePost(String targetUrl, String jsonPayload, int timeoutMs) {
+    private static boolean executePost(String targetUrl, String jsonPayload, int timeoutMs, String token) {
         HttpURLConnection conn = null;
         try {
             URL url = new URL(targetUrl);
@@ -106,6 +107,7 @@ public final class Forwarder {
             conn.setReadTimeout(timeoutMs);
             conn.setDoOutput(true);
             conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+            if (token != null && !token.isEmpty()) conn.setRequestProperty("X-Gate-Token", token);
             try (OutputStream os = conn.getOutputStream()) {
                 byte[] input = jsonPayload.getBytes(StandardCharsets.UTF_8);
                 os.write(input, 0, input.length);

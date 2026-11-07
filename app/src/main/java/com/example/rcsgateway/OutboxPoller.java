@@ -47,10 +47,11 @@ public class OutboxPoller implements Runnable {
             try {
                 SharedPreferences p = app.getSharedPreferences("RcsGatewayPrefs", Context.MODE_PRIVATE);
                 String url = p.getString("outbox_url", "");
+                String token = p.getString("token", "");
                 int secs = p.getInt("poll_secs", 10);
                 intervalMs = Math.max(3, secs) * 1000L;
                 if (!url.isEmpty()) {
-                    pollOnce(url);
+                    pollOnce(url, token);
                 }
             } catch (Exception e) {
                 Forwarder.log(app, "OUTBOX error: " + e.getMessage());
@@ -63,8 +64,8 @@ public class OutboxPoller implements Runnable {
         }
     }
 
-    private void pollOnce(String url) throws Exception {
-        String body = httpGet(url);
+    private void pollOnce(String url, String token) throws Exception {
+        String body = httpGet(url, token);
         if (body == null || body.trim().isEmpty()) return;
 
         JSONArray arr;
@@ -86,29 +87,30 @@ public class OutboxPoller implements Runnable {
 
             boolean ok = SmsSender.send(app, to, text);
             Forwarder.log(app, (ok ? "SMS sent -> " : "SMS send FAIL -> ") + to);
-            ackResult(url, id, ok ? "sent" : "failed");
+            ackResult(url, id, ok ? "sent" : "failed", token);
         }
     }
 
-    private void ackResult(String url, String id, String status) {
+    private void ackResult(String url, String id, String status, String token) {
         if (id == null || id.isEmpty()) return;
         try {
             JSONObject o = new JSONObject();
             o.put("id", id);
             o.put("status", status);
-            httpPost(url, o.toString());
+            httpPost(url, o.toString(), token);
         } catch (Exception e) {
             Forwarder.log(app, "OUTBOX ack error: " + e.getMessage());
         }
     }
 
-    private String httpGet(String url) throws Exception {
+    private String httpGet(String url, String token) throws Exception {
         HttpURLConnection conn = null;
         try {
             conn = (HttpURLConnection) new URL(url).openConnection();
             conn.setRequestMethod("GET");
             conn.setConnectTimeout(4000);
             conn.setReadTimeout(4000);
+            if (token != null && !token.isEmpty()) conn.setRequestProperty("X-Gate-Token", token);
             int code = conn.getResponseCode();
             if (code < 200 || code >= 300) return null;
             StringBuilder sb = new StringBuilder();
@@ -123,7 +125,7 @@ public class OutboxPoller implements Runnable {
         }
     }
 
-    private void httpPost(String url, String json) throws Exception {
+    private void httpPost(String url, String json, String token) throws Exception {
         HttpURLConnection conn = null;
         try {
             conn = (HttpURLConnection) new URL(url).openConnection();
@@ -132,6 +134,7 @@ public class OutboxPoller implements Runnable {
             conn.setReadTimeout(4000);
             conn.setDoOutput(true);
             conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+            if (token != null && !token.isEmpty()) conn.setRequestProperty("X-Gate-Token", token);
             try (OutputStream os = conn.getOutputStream()) {
                 os.write(json.getBytes(StandardCharsets.UTF_8));
             }

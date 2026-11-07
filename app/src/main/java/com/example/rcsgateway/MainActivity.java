@@ -26,7 +26,7 @@ public class MainActivity extends AppCompatActivity {
 
     private TextView tvPermissionStatus, tvLogs;
     private ScrollView scrollLogs;
-    private EditText etLocalUrl, etPublicUrl, etOutboxUrl;
+    private EditText etLocalUrl, etPublicUrl, etOutboxUrl, etToken;
     private SharedPreferences prefs;
 
     private final BroadcastReceiver logReceiver = new BroadcastReceiver() {
@@ -50,12 +50,14 @@ public class MainActivity extends AppCompatActivity {
         etLocalUrl = findViewById(R.id.et_local_url);
         etPublicUrl = findViewById(R.id.et_public_url);
         etOutboxUrl = findViewById(R.id.et_outbox_url);
+        etToken = findViewById(R.id.et_token);
         Button btnGrant = findViewById(R.id.btn_grant_permission);
         Button btnSave = findViewById(R.id.btn_save_config);
 
         etLocalUrl.setText(prefs.getString("local_url", ""));
         etPublicUrl.setText(prefs.getString("public_url", ""));
         etOutboxUrl.setText(prefs.getString("outbox_url", ""));
+        etToken.setText(prefs.getString("token", ""));
 
         requestSmsPermission();
         requestNotificationsPermission();
@@ -69,6 +71,7 @@ public class MainActivity extends AppCompatActivity {
                     .putString("local_url", etLocalUrl.getText().toString().trim())
                     .putString("public_url", etPublicUrl.getText().toString().trim())
                     .putString("outbox_url", etOutboxUrl.getText().toString().trim())
+                    .putString("token", etToken.getText().toString().trim())
                     .apply();
             Toast.makeText(this, "Config saved", Toast.LENGTH_SHORT).show();
             appendLog("Config saved.");

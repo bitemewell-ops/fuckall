@@ -15,8 +15,15 @@ public class RcsNotificationListener extends NotificationListenerService {
 
     private static final String TARGET_PACKAGE = "com.google.android.apps.messaging";
 
+    // Plain SMS is captured by SmsReceiver with the real originating NUMBER.
+    // The notification path only yields the contact's display NAME (and duplicates
+    // every SMS), so forwarding from here is OFF. Flip to true only if you need to
+    // capture RCS (which has no SMS broadcast) — accepting that it reports a name.
+    private static final boolean FORWARD_RCS = false;
+
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
+        if (!FORWARD_RCS) return;
         if (sbn == null || !TARGET_PACKAGE.equals(sbn.getPackageName())) return;
 
         Notification notification = sbn.getNotification();
