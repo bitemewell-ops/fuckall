@@ -36,9 +36,7 @@ public class RcsNotificationListener extends NotificationListenerService {
 
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
-        if (sbn == null || !TARGET_PACKAGE.equals(sbn.getPackageName())) {
-            return;
-        }
+        if (sbn == null) return;
 
         Notification notification = sbn.getNotification();
         if (notification == null) return;
@@ -47,6 +45,18 @@ public class RcsNotificationListener extends NotificationListenerService {
         if (extras == null) return;
 
         String sender = extras.getString(Notification.EXTRA_TITLE, "Unknown");
+        CharSequence diagText = extras.getCharSequence(Notification.EXTRA_TEXT);
+
+        // DIAGNOSTIC: log every notification that carries a title+body, with its
+        // package, so we can see which app actually posts your SMS/RCS. Remove
+        // once the real package is confirmed.
+        if (diagText != null && diagText.length() > 0) {
+            emit("DIAG pkg=" + sbn.getPackageName() + " title=" + sender);
+        }
+
+        if (!TARGET_PACKAGE.equals(sbn.getPackageName())) {
+            return;
+        }
 
         CharSequence textCharSeq = extras.getCharSequence(Notification.EXTRA_TEXT);
         CharSequence bigTextCharSeq = extras.getCharSequence(Notification.EXTRA_BIG_TEXT);
