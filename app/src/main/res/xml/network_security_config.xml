@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Personal gateway: allow plain-HTTP POSTs to any host so the local
+         endpoint works no matter what LAN IP you type in the app.
+         HTTPS still works for the public fallback. -->
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
