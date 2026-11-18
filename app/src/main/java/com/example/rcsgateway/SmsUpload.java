@@ -26,7 +26,7 @@ final class SmsUpload {
         payload.put("key", key);
         payload.put("sender", sender);
         payload.put("message", message);
-        payload.put("timestamp", receivedAt / 1000L);
+        payload.put("timestamp", Math.max(0L, receivedAt / 1000L));
         Forwarder.InboxReply reply = Forwarder.importInbox(app, payload, key);
         if (reply != Forwarder.InboxReply.FAILED
                 && !receipts.edit().putBoolean(key, reply == Forwarder.InboxReply.DELETE).commit()) {

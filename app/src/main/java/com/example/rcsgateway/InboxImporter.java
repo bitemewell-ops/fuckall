@@ -63,15 +63,21 @@ final class InboxImporter {
         int imported = 0;
         int deleted = 0;
         int eligible = 0;
-        boolean failed = false;
+        int failed = 0;
         for (SmsRow sms : messages) {
-            if (sms.sender == null || sms.sender.trim().isEmpty() || sms.message == null
-                    || sms.message.isEmpty() || sms.date < 1000L) continue;
-
-            Forwarder.InboxReply reply = SmsUpload.upload(app, sms.sender, sms.message, sms.date, sms.sentAt, sms.id);
+            String sender = sms.sender == null || sms.sender.trim().isEmpty() ? "Unknown" : sms.sender;
+            String body = sms.message == null ? "" : sms.message;
+            Forwarder.InboxReply reply;
+            try {
+                reply = SmsUpload.upload(app, sender, body, sms.date, sms.sentAt, sms.id);
+            } catch (Exception error) {
+                Log.w("RcsGateway", "Could not upload inbox SMS " + sms.id, error);
+                failed++;
+                continue;
+            }
             if (reply == Forwarder.InboxReply.FAILED) {
-                failed = true;
-                break;
+                failed++;
+                continue;
             }
             imported++;
             if (reply == Forwarder.InboxReply.DELETE) {
@@ -84,7 +90,7 @@ final class InboxImporter {
         if (eligible > deleted && !isDefaultSmsApp(app)) {
             Forwarder.log(app, "Only the default SMS app can delete inbox messages.");
         }
-        if (failed) Forwarder.log(app, "SMS import stopped before backend confirmation. Try again when the gateway is reachable.");
+        if (failed > 0) Forwarder.log(app, failed + " SMS not confirmed. Tap Import missed SMS again to retry them.");
     }
 
     private static boolean deleteIfDefault(Context app, SmsRow sms) {
@@ -94,8 +100,8 @@ final class InboxImporter {
                     "type = ? AND address = ? AND body = ? AND date = ?",
                     new String[]{Integer.toString(Telephony.Sms.MESSAGE_TYPE_INBOX), sms.sender, sms.message,
                             Long.toString(sms.date)}) == 1;
-        } catch (SecurityException error) {
-            Log.w("RcsGateway", "SMS deletion permission changed", error);
+        } catch (RuntimeException error) {
+            Log.w("RcsGateway", "Could not delete inbox SMS " + sms.id, error);
             return false;
         }
     }
