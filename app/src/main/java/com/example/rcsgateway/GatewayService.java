@@ -63,8 +63,8 @@ public class GatewayService extends Service {
             if (nm != null) nm.createNotificationChannel(ch);
         }
         return new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("RCS Gateway running")
-                .setContentText("Forwarding incoming SMS")
+                .setContentTitle("SMS Gateway running")
+                .setContentText("Sending outgoing SMS")
                 .setSmallIcon(android.R.drawable.stat_notify_sync)
                 .setOngoing(true)
                 .setPriority(NotificationCompat.PRIORITY_MIN)

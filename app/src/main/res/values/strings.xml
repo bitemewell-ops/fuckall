@@ -1,5 +1,3 @@
 <resources>
-    <string name="app_name">RCS Gateway</string>
-    <string name="rcs_import_label">RCS Gateway import</string>
-    <string name="rcs_import_description">Reads the selected reply in Google Messages when you start an RCS import and sends it to your configured gateway after you tap Import this reply.</string>
+    <string name="app_name">SMS Gateway</string>
 </resources>

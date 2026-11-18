@@ -3,21 +3,15 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.RECEIVE_SMS" />
-    <uses-permission android:name="android.permission.READ_SMS" />
     <uses-permission android:name="android.permission.SEND_SMS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
-    <queries>
-        <package android:name="com.google.android.apps.messaging" />
-    </queries>
-
     <application
         android:allowBackup="true"
-        android:label="RCS Gateway"
+        android:label="SMS Gateway (outgoing)"
         android:networkSecurityConfig="@xml/network_security_config"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
@@ -31,13 +25,6 @@
             </intent-filter>
         </activity>
 
-        <receiver
-            android:name=".SmsReceiver"
-            android:exported="true">
-            <intent-filter android:priority="999">
-                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
-            </intent-filter>
-        </receiver>
 
         <receiver
             android:name=".BootReceiver"
@@ -57,25 +44,7 @@
                 android:value="sms_gateway" />
         </service>
 
-        <service
-            android:name=".RcsNotificationListener"
-            android:exported="true"
-            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
-            <intent-filter>
-                <action android:name="android.service.notification.NotificationListenerService" />
-            </intent-filter>
-        </service>
 
-        <service
-            android:name=".RcsImportService"
-            android:exported="true"
-            android:label="@string/rcs_import_label"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
-            </intent-filter>
-            <meta-data android:name="android.accessibilityservice" android:resource="@xml/rcs_import_service" />
-        </service>
 
     </application>
 
