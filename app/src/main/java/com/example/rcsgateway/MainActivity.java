@@ -1,5 +1,6 @@
 package com.example.rcsgateway;
 
+import android.app.DatePickerDialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -22,7 +23,11 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import android.Manifest;
 
+import java.util.Calendar;
+
 public class MainActivity extends AppCompatActivity {
+
+    private static final int REQUEST_READ_INBOX = 3;
 
     private TextView tvPermissionStatus, tvLogs;
     private ScrollView scrollLogs;
@@ -53,6 +58,7 @@ public class MainActivity extends AppCompatActivity {
         etToken = findViewById(R.id.et_token);
         Button btnGrant = findViewById(R.id.btn_grant_permission);
         Button btnSave = findViewById(R.id.btn_save_config);
+        findViewById(R.id.btn_import_inbox).setOnClickListener(v -> requestInboxImport());
 
         etLocalUrl.setText(prefs.getString("local_url", ""));
         etPublicUrl.setText(prefs.getString("public_url", ""));
@@ -95,6 +101,37 @@ public class MainActivity extends AppCompatActivity {
     private void appendLog(String line) {
         tvLogs.append(line + "\n");
         scrollLogs.post(() -> scrollLogs.fullScroll(ScrollView.FOCUS_DOWN));
+    }
+
+    private void requestInboxImport() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_SMS}, REQUEST_READ_INBOX);
+            return;
+        }
+        pickInboxStart();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode != REQUEST_READ_INBOX) return;
+        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) pickInboxStart();
+        else appendLog("SMS inbox access is required for import.");
+    }
+
+    private void pickInboxStart() {
+        Calendar today = Calendar.getInstance();
+        DatePickerDialog picker = new DatePickerDialog(this, (view, year, month, day) -> {
+            Calendar since = Calendar.getInstance();
+            since.clear();
+            since.set(year, month, day, 0, 0, 0);
+            if (InboxImporter.start(this, since.getTimeInMillis())) appendLog("Checking SMS inbox…");
+            else appendLog("SMS inbox import is already running.");
+        }, today.get(Calendar.YEAR), today.get(Calendar.MONTH), today.get(Calendar.DAY_OF_MONTH));
+        picker.setTitle("Import SMS received since");
+        picker.getDatePicker().setMaxDate(today.getTimeInMillis());
+        picker.show();
     }
 
     private void requestSmsPermission() {

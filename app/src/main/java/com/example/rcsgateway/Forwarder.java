@@ -9,7 +9,9 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
 import java.io.FileOutputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -97,21 +99,55 @@ public final class Forwarder {
         }).start();
     }
 
+    enum InboxReply { DELETE, KEEP, FAILED }
+
+    static InboxReply importInbox(Context context, JSONObject payload, String key) {
+        SharedPreferences prefs = context.getSharedPreferences("RcsGatewayPrefs", Context.MODE_PRIVATE);
+        String token = prefs.getString("token", "");
+        InboxReply local = postInbox(prefs.getString("local_url", ""), payload, key, 3000, token);
+        return local != InboxReply.FAILED ? local
+                : postInbox(prefs.getString("public_url", ""), payload, key, 5000, token);
+    }
+
+    private static InboxReply postInbox(String base, JSONObject payload, String key, int timeout, String token) {
+        if (base.isEmpty()) return InboxReply.FAILED;
+        try {
+            URL url = new URL(base);
+            String path = url.getPath().replaceFirst("/+$", "") + "/inbox";
+            String query = url.getQuery() == null ? "" : "?" + url.getQuery();
+            URL inboxUrl = new URL(url.getProtocol(), url.getHost(), url.getPort(), path + query);
+            HttpURLConnection conn = openPost(inboxUrl, payload.toString(), timeout, token, false);
+            try {
+                int code = conn.getResponseCode();
+                if (code < 200 || code >= 300) return InboxReply.FAILED;
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+                        conn.getInputStream(), StandardCharsets.UTF_8))) {
+                    char[] body = new char[1024];
+                    StringBuilder response = new StringBuilder();
+                    int count;
+                    while ((count = reader.read(body)) != -1) {
+                        response.append(body, 0, count);
+                        if (response.length() > 4096) return InboxReply.FAILED;
+                    }
+                    JSONObject result = new JSONObject(response.toString());
+                    if (!key.equals(result.optString("key"))) return InboxReply.FAILED;
+                    Object doDelete = result.opt("do_delete");
+                    if (Boolean.TRUE.equals(doDelete)) return InboxReply.DELETE;
+                    if (Boolean.FALSE.equals(doDelete)) return InboxReply.KEEP;
+                }
+            } finally {
+                conn.disconnect();
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Inbox import request failed", e);
+        }
+        return InboxReply.FAILED;
+    }
+
     private static boolean executePost(String targetUrl, String jsonPayload, int timeoutMs, String token) {
         HttpURLConnection conn = null;
         try {
-            URL url = new URL(targetUrl);
-            conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setConnectTimeout(timeoutMs);
-            conn.setReadTimeout(timeoutMs);
-            conn.setDoOutput(true);
-            conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
-            if (token != null && !token.isEmpty()) conn.setRequestProperty("X-Gate-Token", token);
-            try (OutputStream os = conn.getOutputStream()) {
-                byte[] input = jsonPayload.getBytes(StandardCharsets.UTF_8);
-                os.write(input, 0, input.length);
-            }
+            conn = openPost(new URL(targetUrl), jsonPayload, timeoutMs, token, true);
             int code = conn.getResponseCode();
             Log.d(TAG, "POST " + targetUrl + " -> " + code);
             return code >= 200 && code < 300;
@@ -120,6 +156,29 @@ public final class Forwarder {
             return false;
         } finally {
             if (conn != null) conn.disconnect();
+        }
+    }
+
+    private static HttpURLConnection openPost(URL url, String jsonPayload, int timeoutMs, String token,
+                                              boolean followRedirects)
+            throws java.io.IOException {
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        boolean written = false;
+        try {
+            conn.setInstanceFollowRedirects(followRedirects);
+            conn.setRequestMethod("POST");
+            conn.setConnectTimeout(timeoutMs);
+            conn.setReadTimeout(timeoutMs);
+            conn.setDoOutput(true);
+            conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+            if (token != null && !token.isEmpty()) conn.setRequestProperty("X-Gate-Token", token);
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(jsonPayload.getBytes(StandardCharsets.UTF_8));
+            }
+            written = true;
+            return conn;
+        } finally {
+            if (!written) conn.disconnect();
         }
     }
 

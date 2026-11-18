@@ -59,6 +59,13 @@
         android:layout_marginTop="8dp"
         android:text="Save Endpoint Config" />
 
+    <Button
+        android:id="@+id/btn_import_inbox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Import missed SMS…" />
+
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
