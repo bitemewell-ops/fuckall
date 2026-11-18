@@ -59,12 +59,26 @@
         android:layout_marginTop="8dp"
         android:text="Save Endpoint Config" />
 
-    <Button
-        android:id="@+id/btn_import_inbox"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="Import missed SMS" />
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btn_import_inbox"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Import missed SMS" />
+
+        <Button
+            android:id="@+id/btn_import_rcs"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Import RCS reply" />
+    </LinearLayout>
 
     <TextView
         android:layout_width="match_parent"

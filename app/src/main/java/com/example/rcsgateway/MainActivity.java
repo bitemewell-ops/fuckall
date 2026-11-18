@@ -56,6 +56,7 @@ public class MainActivity extends AppCompatActivity {
         Button btnGrant = findViewById(R.id.btn_grant_permission);
         Button btnSave = findViewById(R.id.btn_save_config);
         findViewById(R.id.btn_import_inbox).setOnClickListener(v -> requestInboxImport());
+        findViewById(R.id.btn_import_rcs).setOnClickListener(v -> startRcsImport());
 
         etLocalUrl.setText(prefs.getString("local_url", ""));
         etPublicUrl.setText(prefs.getString("public_url", ""));
@@ -120,6 +121,22 @@ public class MainActivity extends AppCompatActivity {
     private void startInboxImport() {
         if (InboxImporter.start(this)) appendLog("Checking SMS inbox…");
         else appendLog("SMS inbox import is already running.");
+    }
+
+    private void startRcsImport() {
+        Intent messages = getPackageManager().getLaunchIntentForPackage(RcsImportService.MESSAGES);
+        if (messages == null) {
+            appendLog("Google Messages is required for RCS import.");
+            return;
+        }
+        if (!RcsImportService.arm()) {
+            Toast.makeText(this, "Enable RCS Gateway import in Accessibility, then tap Import RCS reply again.",
+                    Toast.LENGTH_LONG).show();
+            startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+            return;
+        }
+        Toast.makeText(this, "Long-press the incoming reply, then open View details.", Toast.LENGTH_LONG).show();
+        startActivity(messages);
     }
 
     private void requestSmsPermission() {

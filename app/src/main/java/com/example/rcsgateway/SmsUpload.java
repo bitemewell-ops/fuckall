@@ -16,7 +16,20 @@ final class SmsUpload {
     // Live broadcasts and the inbox importer share this receipt store.
     static synchronized Forwarder.InboxReply upload(Context app, String sender, String message,
                                                    long receivedAt, long sentAt, long inboxId) throws Exception {
-        String key = messageKey(app, sender, message, receivedAt, sentAt, inboxId);
+        JSONArray fields = new JSONArray().put(deviceId(app));
+        if (sentAt > 0) fields.put("sms").put(sender).put(message).put(sentAt);
+        else fields.put(inboxId).put(sender).put(message).put(receivedAt);
+        return uploadWithKey(app, sender, message, receivedAt, hash(fields));
+    }
+
+    static synchronized Forwarder.InboxReply uploadRcs(Context app, String sender, String message,
+                                                       long receivedAt) throws Exception {
+        JSONArray fields = new JSONArray().put(deviceId(app)).put("rcs").put(sender).put(message).put(receivedAt);
+        return uploadWithKey(app, sender, message, receivedAt, hash(fields));
+    }
+
+    private static Forwarder.InboxReply uploadWithKey(Context app, String sender, String message,
+                                                      long receivedAt, String key) throws Exception {
         SharedPreferences receipts = app.getSharedPreferences("SmsUploadReceipts", Context.MODE_PRIVATE);
         if (receipts.contains(key)) {
             return receipts.getBoolean(key, false) ? Forwarder.InboxReply.DELETE : Forwarder.InboxReply.KEEP;
@@ -35,14 +48,13 @@ final class SmsUpload {
         return reply;
     }
 
-    private static String messageKey(Context app, String sender, String message, long receivedAt,
-                                     long sentAt, long inboxId) throws Exception {
+    private static String deviceId(Context app) {
         String device = Settings.Secure.getString(app.getContentResolver(), Settings.Secure.ANDROID_ID);
         if (device == null || device.isEmpty()) throw new IllegalStateException("Missing Android ID");
-        // DATE_SENT is the SMS timestamp available to both the receiver and the inbox.
-        JSONArray fields = sentAt > 0
-                ? new JSONArray().put(device).put("sms").put(sender).put(message).put(sentAt)
-                : new JSONArray().put(device).put(inboxId).put(sender).put(message).put(receivedAt);
+        return device;
+    }
+
+    private static String hash(JSONArray fields) throws Exception {
         byte[] digest = MessageDigest.getInstance("SHA-256")
                 .digest(fields.toString().getBytes(StandardCharsets.UTF_8));
         StringBuilder hex = new StringBuilder(64);
