@@ -34,12 +34,12 @@ final class InboxImporter {
 
     private InboxImporter() {}
 
-    static boolean start(Context context, long since) {
+    static boolean start(Context context) {
         if (!RUNNING.compareAndSet(false, true)) return false;
         Context app = context.getApplicationContext();
         new Thread(() -> {
             try {
-                scan(app, since);
+                scan(app);
             } catch (Exception error) {
                 Log.w("RcsGateway", "Could not read SMS inbox", error);
                 Forwarder.log(app, "SMS import stopped. Check inbox permission and try again.");
@@ -50,11 +50,11 @@ final class InboxImporter {
         return true;
     }
 
-    private static void scan(Context app, long since) throws Exception {
+    private static void scan(Context app) throws Exception {
         ContentResolver resolver = app.getContentResolver();
         List<SmsRow> messages = new ArrayList<>();
         try (Cursor rows = resolver.query(Telephony.Sms.Inbox.CONTENT_URI, COLUMNS,
-                Telephony.Sms.DATE + " >= ?", new String[]{Long.toString(since)},
+                null, null,
                 Telephony.Sms.DATE + " ASC, " + Telephony.Sms._ID + " ASC")) {
             if (rows == null) throw new IllegalStateException("Inbox query failed");
             while (rows.moveToNext()) messages.add(new SmsRow(rows));

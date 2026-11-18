@@ -1,6 +1,5 @@
 package com.example.rcsgateway;
 
-import android.app.DatePickerDialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -22,8 +21,6 @@ import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import android.Manifest;
-
-import java.util.Calendar;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -109,29 +106,20 @@ public class MainActivity extends AppCompatActivity {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_SMS}, REQUEST_READ_INBOX);
             return;
         }
-        pickInboxStart();
+        startInboxImport();
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode != REQUEST_READ_INBOX) return;
-        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) pickInboxStart();
+        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) startInboxImport();
         else appendLog("SMS inbox access is required for import.");
     }
 
-    private void pickInboxStart() {
-        Calendar today = Calendar.getInstance();
-        DatePickerDialog picker = new DatePickerDialog(this, (view, year, month, day) -> {
-            Calendar since = Calendar.getInstance();
-            since.clear();
-            since.set(year, month, day, 0, 0, 0);
-            if (InboxImporter.start(this, since.getTimeInMillis())) appendLog("Checking SMS inbox…");
-            else appendLog("SMS inbox import is already running.");
-        }, today.get(Calendar.YEAR), today.get(Calendar.MONTH), today.get(Calendar.DAY_OF_MONTH));
-        picker.setTitle("Import SMS received since");
-        picker.getDatePicker().setMaxDate(today.getTimeInMillis());
-        picker.show();
+    private void startInboxImport() {
+        if (InboxImporter.start(this)) appendLog("Checking SMS inbox…");
+        else appendLog("SMS inbox import is already running.");
     }
 
     private void requestSmsPermission() {
